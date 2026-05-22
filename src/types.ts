@@ -93,6 +93,7 @@ export interface BudgetyProfile {
   trackNoteShortcutAdded?: boolean;
   telegramNotificationsEnabled?: boolean;
   phoneNumber?: string;
+  telegramChatId?: string;
 }
 
 export interface MonthlyBill {

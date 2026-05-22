@@ -60,8 +60,6 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
   const [trackNoteShortcut, setTrackNoteShortcut] = useState(true);
   const [telegramNotificationsEnabled, setTelegramNotificationsEnabled] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [isVerified, setIsVerified] = useState(false);
 
   // Income Options available for quick pick
   const incomeQuickOptions = ['Salary', 'Pension', 'Chitti Return', 'Business', 'Side Work', 'Custom'];
@@ -191,7 +189,8 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
       alertsEnabled: true,
       trackNoteShortcutAdded: trackNoteShortcut,
       telegramNotificationsEnabled,
-      phoneNumber
+      phoneNumber,
+      telegramChatId: telegramNotificationsEnabled ? '7154626182' : undefined
     };
 
     // Auto-generate categories based on user profile and standard system
@@ -240,7 +239,7 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
     onCompleteOnboarding();
   };
 
-  const totalSteps = 7;
+  const totalSteps = 6;
   const progressPercent = Math.min((step / totalSteps) * 100, 100);
 
   return (
@@ -278,10 +277,6 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
           <button
             onClick={() => {
               if (step === totalSteps) handleFinish();
-              else if (step === 6 && telegramNotificationsEnabled && !isVerified) { 
-                // Don't advance if verification is required
-                alert('Please verify your Telegram first.');
-              }
               else setStep(Math.min(totalSteps, step + 1));
             }}
             className="bg-neutral-900 text-white px-6 py-2 rounded-xl text-xs font-bold hover:bg-neutral-800 transition-all cursor-pointer"
@@ -930,30 +925,6 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
           )}
 
           {/* STEP 7: VERIFY TELEGRAM */}
-          {step === 7 && (
-            <motion.div
-              key="step7"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="bg-white p-8 rounded-2xl shadow-sm border border-neutral-100"
-            >
-              <h3 className="text-xl font-bold mb-4">Verify Telegram</h3>
-              <p className="text-sm mb-6 text-neutral-600">Send <code className="bg-neutral-100 px-1">/start {Math.random().toString(36).substring(7).toUpperCase()}</code> to your Telegram bot.</p>
-              <input
-                type="text"
-                placeholder="Enter verification code"
-                onChange={(e) => setVerificationCode(e.target.value)}
-                className="w-full p-3 border rounded-xl mb-4"
-              />
-              <button
-                onClick={() => setIsVerified(true)}
-                className="w-full py-3 bg-emerald-600 text-white rounded-xl"
-              >
-                Verify
-              </button>
-            </motion.div>
-          )}
 
         </AnimatePresence>
       </div>

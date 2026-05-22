@@ -357,10 +357,10 @@ export default function App() {
                 <button
                   onClick={() => navigateTo('presets')}
                   className={`flex items-center gap-2.5 text-xs px-4 py-3 rounded-xl font-bold transition-all cursor-pointer text-left w-full ${currentRoute === 'presets' ? 'bg-neutral-900 text-white' : 'text-neutral-600 hover:bg-neutral-100'}`}
-                  title="Budget % Presets & Investments"
+                  title="Presets"
                 >
                   <Sparkles className="w-4 h-4 shrink-0 text-amber-500" />
-                  {!sidebarCollapsed && <span>% Presets & Investments</span>}
+                  {!sidebarCollapsed && <span>Presets</span>}
                 </button>
 
                 <button

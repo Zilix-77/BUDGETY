@@ -31,7 +31,8 @@ import {
   RefreshCw,
   Plus,
   UserCheck,
-  Trash2
+  Trash2,
+  FileText
 } from 'lucide-react';
 import { 
   getProfile, 
@@ -415,7 +416,7 @@ export default function DashboardView({
     doc.text(`Budget Report - ${selectedYearMonth}`, 14, 15);
     
     // Add Summary
-    doc.autoTable({
+    (doc as any).autoTable({
       head: [['Metric', 'Amount (₹)']],
       body: [
         ['Total Income', totalIncome],
@@ -428,7 +429,7 @@ export default function DashboardView({
     
     // Add expenses list (simplified)
     const tableBody = currentMonthExpenses.map(e => [e.date, e.title, e.amount, e.type]);
-    doc.autoTable({
+    (doc as any).autoTable({
         head: [['Date', 'Item', 'Amount', 'Type']],
         body: tableBody,
         startY: (doc as any).lastAutoTable.finalY + 10
