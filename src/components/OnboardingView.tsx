@@ -58,6 +58,8 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
   // Step 6 State: Daily Notes Feature
   const [dailyNotesEnabled, setDailyNotesEnabled] = useState(true);
   const [trackNoteShortcut, setTrackNoteShortcut] = useState(true);
+  const [telegramNotificationsEnabled, setTelegramNotificationsEnabled] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
 
   // Income Options available for quick pick
   const incomeQuickOptions = ['Salary', 'Pension', 'Chitti Return', 'Business', 'Side Work', 'Custom'];
@@ -83,6 +85,16 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
     const validMonths = monthsDiff <= 0 ? 1 : monthsDiff;
     return Math.round(target / validMonths);
   };
+
+  const getIncomeBracket = (totalIncome: number) => {
+    if (totalIncome < 25000) return { name: 'Starter', needs: 60, wants: 20, savings: 20, advice: 'Emergency fund, debt reduction, recurring deposit' };
+    if (totalIncome < 50000) return { name: 'Growing', needs: 50, wants: 30, savings: 20, advice: 'Emergency fund, mutual funds, RD/FD' };
+    if (totalIncome < 75000) return { name: 'Stable', needs: 45, wants: 30, savings: 25, advice: 'SIP, mutual funds, insurance' };
+    return { name: 'Advanced', needs: 40, wants: 30, savings: 30, advice: 'Diversified investing, stocks, gold, debt funds' };
+  };
+
+  const totalMonthlyIncome = incomeSources.reduce((sum, src) => sum + src.amount, 0);
+  const incomeBracket = getIncomeBracket(totalMonthlyIncome);
 
   // Quick Action: Add Income Source
   const addIncomeSource = () => {
@@ -132,6 +144,10 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
     setCustomCommitAmount(1000);
   };
 
+  const updateCommitmentAmount = (id: string, amount: number) => {
+    setFixedCommitments(fixedCommitments.map(c => c.id === id ? { ...c, amount } : c));
+  };
+
   const removeCommitment = (id: string) => {
     setFixedCommitments(fixedCommitments.filter(c => c.id !== id));
   };
@@ -171,7 +187,9 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
       biggestFinancialIssue,
       dailyNotesEnabled,
       alertsEnabled: true,
-      trackNoteShortcutAdded: trackNoteShortcut
+      trackNoteShortcutAdded: trackNoteShortcut,
+      telegramNotificationsEnabled,
+      phoneNumber
     };
 
     // Auto-generate categories based on user profile and standard system
@@ -432,7 +450,7 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
                 <input
                   type="range"
                   min="1"
-                  max="10"
+                  max="50"
                   value={familySize}
                   onChange={(e) => setFamilySize(Number(e.target.value))}
                   className="w-full accent-neutral-950 h-1.5 bg-neutral-200 rounded-lg cursor-pointer"
@@ -440,8 +458,8 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
                 
                 <div className="flex justify-between w-full text-[10px] text-neutral-400 font-mono mt-2 px-1">
                   <span>1 (Just Me)</span>
-                  <span>5 (Average)</span>
-                  <span>10 (Joint Family)</span>
+                  <span>20 (Limit)</span>
+                  <span>50 (Max)</span>
                 </div>
               </div>
 
@@ -460,7 +478,7 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
             </motion.div>
           )}
 
-          {/* STEP 3: FIXED COMMITMENTS */}
+          {/* STEP 3: SMART SUGGESTED BUDGET & FIXED COMMITMENTS */}
           {step === 3 && (
             <motion.div
               key="step3"
@@ -473,20 +491,48 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
                 <div className="p-2 bg-neutral-900 text-white rounded-xl">
                   <CreditCard className="w-5 h-5" />
                 </div>
-                <h3 className="text-xl font-bold text-neutral-900">What goes out every month?</h3>
+                <h3 className="text-xl font-bold text-neutral-900">Your Suggested Budget</h3>
+              </div>
+              
+              <div className="bg-neutral-900 text-white p-5 rounded-2xl mb-6">
+                <h4 className="text-xs uppercase tracking-widest font-bold mb-3 opacity-60">Bracket: {incomeBracket.name} Income</h4>
+                <p className="text-3xl font-black mb-4">₹{totalMonthlyIncome.toLocaleString('en-IN')}</p>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-[10px] opacity-60">Needs</p>
+                    <p className="font-bold text-sm">{incomeBracket.needs}%</p>
+                    <p className="text-[10px] font-mono">₹{Math.round(totalMonthlyIncome * (incomeBracket.needs / 100)).toLocaleString('en-IN')}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] opacity-60">Wants</p>
+                    <p className="font-bold text-sm">{incomeBracket.wants}%</p>
+                    <p className="text-[10px] font-mono">₹{Math.round(totalMonthlyIncome * (incomeBracket.wants / 100)).toLocaleString('en-IN')}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] opacity-60">Savings</p>
+                    <p className="font-bold text-sm">{incomeBracket.savings}%</p>
+                    <p className="text-[10px] font-mono">₹{Math.round(totalMonthlyIncome * (incomeBracket.savings / 100)).toLocaleString('en-IN')}</p>
+                  </div>
+                </div>
+                <p className="text-[10px] mt-4 opacity-70 italic font-mono pt-3 border-t border-white/10">
+                  Recommended: {incomeBracket.advice}
+                </p>
               </div>
 
+              <h3 className="text-lg font-bold text-neutral-900 mb-2">What goes out every month?</h3>
               <p className="text-neutral-500 text-sm mb-6 leading-relaxed font-light">
-                These are rent, EMIs, or school fees that go out every month without fail. We will automatically log them as **Needs** so you don't have to enter them every time.
+                These are rent, EMIs, or school fees that go out every month without fail.
               </p>
-
+              
+              {/* [Keep the existing list and form rendering logic here] */}
+              
               {/* Quick Picks */}
               <div className="mb-6 font-sans">
                 <span className="block text-[10px] uppercase font-bold tracking-wider text-neutral-400 mb-2.5">Quick Add Favorites (Click to add defaults)</span>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => handleQuickAddCommitment('Rent Inflow/Outflow', 8000)}
+                    onClick={() => handleQuickAddCommitment('Rent', 8000)}
                     className="text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-medium px-3 py-1.5 rounded-lg border border-neutral-200/60 transition-all cursor-pointer"
                   >
                     🏠 Rent (~₹8k)
@@ -505,25 +551,18 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
                   >
                     🎒 School Fees (~₹3k)
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickAddCommitment('Chitti Contribution', 2000)}
-                    className="text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-medium px-3 py-1.5 rounded-lg border border-neutral-200/60 transition-all cursor-pointer"
-                  >
-                    🏦 Chitti (~₹2k)
-                  </button>
                 </div>
               </div>
 
               {/* Form Input Custom Commitments */}
               <div className="bg-neutral-50/80 p-4 rounded-xl border border-neutral-100 flex flex-col sm:flex-row gap-3 items-end mb-6">
                 <div className="flex-1 w-full">
-                  <label className="block text-[10px] font-medium text-neutral-400 uppercase mb-1">Fee / Commitment Name</label>
+                  <label className="block text-[10px] font-medium text-neutral-400 uppercase mb-1">Name</label>
                   <input
                     type="text"
                     value={customCommitName}
                     onChange={(e) => setCustomCommitName(e.target.value)}
-                    placeholder="e.g., Cable TV, Milkman"
+                    placeholder="e.g., Cable TV"
                     className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs focus:border-neutral-900 focus:outline-none transition-all"
                   />
                 </div>
@@ -531,8 +570,6 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
                   <label className="block text-[10px] font-medium text-neutral-400 uppercase mb-1">Amount (₹)</label>
                   <input
                     type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
                     value={customCommitAmount === 0 ? '' : customCommitAmount}
                     onChange={(e) => {
                       const clean = e.target.value.replace(/[^0-9]/g, '');
@@ -554,13 +591,18 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
               <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
                 <span className="block text-[10px] uppercase font-bold tracking-wider text-neutral-400">Current Fixed Expenses ({fixedCommitments.length})</span>
                 {fixedCommitments.length === 0 ? (
-                  <p className="text-xs text-neutral-400 italic font-light pt-2">No fixed commitments added yet. Skip or click a recommendation above.</p>
+                  <p className="text-xs text-neutral-400 italic font-light pt-2">No fixed commitments added yet.</p>
                 ) : (
                   fixedCommitments.map(c => (
                     <div key={c.id} className="flex justify-between items-center bg-neutral-50 border border-neutral-200 px-3.5 py-2 rounded-xl">
                       <span className="text-xs font-semibold text-neutral-800">{c.name}</span>
                       <div className="flex items-center gap-2.5">
-                        <span className="text-xs font-semibold text-neutral-900 font-number">₹{c.amount.toLocaleString('en-IN')}</span>
+                        <input
+                          type="number"
+                          value={c.amount}
+                          onChange={(e) => updateCommitmentAmount(c.id, Number(e.target.value))}
+                          className="text-xs font-semibold text-neutral-900 font-number w-20 border border-neutral-300 rounded px-1"
+                        />
                         <button
                           type="button"
                           onClick={() => removeCommitment(c.id)}
@@ -614,7 +656,13 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
                       value={yearlySavingsTarget === 0 ? '' : yearlySavingsTarget}
                       onChange={(e) => {
                         const clean = e.target.value.replace(/[^0-9]/g, '');
-                        setYearlySavingsTarget(clean === '' ? 0 : parseInt(clean, 10));
+                        const val = clean === '' ? 0 : parseInt(clean, 10);
+                        const maxLimit = totalMonthlyIncome * 12;
+                        if (val > maxLimit) {
+                          setYearlySavingsTarget(maxLimit);
+                        } else {
+                          setYearlySavingsTarget(val);
+                        }
                       }}
                       className="w-full rounded-xl border border-emerald-300/60 bg-white pl-7 pr-3 py-1.5 text-xs focus:border-emerald-500 focus:outline-none font-number font-bold text-emerald-900"
                     />
@@ -786,18 +834,43 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
                 <h3 className="text-xl font-bold text-neutral-900">Add Track Note to Home Screen?</h3>
               </div>
 
-              <p className="text-neutral-500 text-sm mb-5 leading-relaxed font-light">
+               <p className="text-neutral-500 text-sm mb-5 leading-relaxed font-light">
                 Do you want to add a direct <strong>Track Note shortcut</strong> to the Home Screen? It lets you instantly write quick stamps like "tea 20, breakfast 80" with automatic time stamps and keeps written ideas safe for up to 3 days!
+                We can also send you <strong>daily budget alerts and suggestions</strong> via Telegram. If you'd like this, please provide your WhatsApp/Telegram-linked phone number.
               </p>
 
-              <div className="bg-amber-50 rounded-2xl border border-amber-200/50 p-5 mb-8 text-amber-955 font-sans text-xs">
-                <p className="font-bold mb-1 col-amber-950">📝 Track Note Shortcut App:</p>
-                <p className="font-light leading-relaxed mb-3 text-amber-900 font-sans">
-                  This places a beautiful mini-app tile right on your dashboard! Write down fast sequential entries throughout the day. Values are kept safe for 3 days before automatically rolling over.
-                </p>
-                <div className="bg-white p-3 rounded-xl border border-amber-200 text-[11px] text-amber-900/80 font-mono italic">
-                  "Auto-saves to browser memory on every keystroke. Saves everything you write for up to 3 days."
+              <div className="bg-amber-50 rounded-2xl border border-amber-200/50 p-5 mb-5 text-amber-955 font-sans text-xs">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={trackNoteShortcut}
+                    onChange={(e) => setTrackNoteShortcut(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <span>Add Track Note shortcut</span>
                 </div>
+              </div>
+              
+              <div className="bg-blue-50 rounded-2xl border border-blue-200/50 p-5 mb-5 text-blue-950 font-sans text-xs">
+                <label className="flex items-center gap-3 font-bold mb-2">
+                  <input
+                    type="checkbox"
+                    // Need state for this: telegramEnabled
+                    checked={telegramNotificationsEnabled}
+                    onChange={(e) => setTelegramNotificationsEnabled(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  Enable Telegram Alerts
+                </label>
+                {telegramNotificationsEnabled && (
+                  <input
+                    type="tel"
+                    placeholder="Enter phone number (+91...)"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="w-full mt-2 rounded-xl border border-blue-200/50 p-2 text-xs"
+                  />
+                )}
               </div>
 
               <div className="flex gap-4 font-sans justify-center">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bar } from 'react-chartjs-2';
+import { Pie, Bar } from 'react-chartjs-2';
 import { 
   FileText, 
   ChevronDown, 
@@ -155,6 +155,17 @@ export default function ExpensesView({ onNavigate, selectedMonth }: ExpensesView
     e.preventDefault();
     if (!title.trim() || !amount) return;
 
+    // Validation: Check if spent exceeds income
+    const totalIncome = profile?.incomeSources.reduce((sum, s) => sum + s.amount, 0) || 0;
+    const currentMonthExpenses = expenses.filter(exp => exp.date.startsWith(selectedMonth));
+    const totalSpentThisMonth = currentMonthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+    if (totalSpentThisMonth + Number(amount) > totalIncome) {
+      if (!confirm("Your expense is exceeding your total income. Do you want to proceed?")) {
+        return;
+      }
+    }
+
     // Check category settings of chosen category to map defaults if custom type applies
     const activeCat = categories.find(c => c.name === category);
     const finalType = activeCat ? activeCat.type : type;
@@ -214,6 +225,35 @@ export default function ExpensesView({ onNavigate, selectedMonth }: ExpensesView
   // LOG MATH: CATEGORY BREAKDOWN METRICS FOR BAR CHART
   const currentMonthExpenses = expenses.filter(e => e.date.startsWith(selectedMonth));
   
+  // PIE CHART DATA (Needs vs Wants vs Savings)
+  const spentNeeds = currentMonthExpenses.filter(e => e.type === 'Need').reduce((sum, e) => sum + e.amount, 0);
+  const spentWants = currentMonthExpenses.filter(e => e.type === 'Want').reduce((sum, e) => sum + e.amount, 0);
+  const totalSaved = currentMonthExpenses.filter(e => e.type === 'Saving').reduce((sum, e) => sum + e.amount, 0);
+
+  const pieData = {
+    labels: ['Needs (Essential)', 'Wants (Discretionary)', 'Savings (Future Self)'],
+    datasets: [
+      {
+        data: [spentNeeds, spentWants, totalSaved],
+        backgroundColor: [
+          'rgba(23, 23, 23, 0.9)',    
+          'rgba(239, 68, 68, 0.85)',   
+          'rgba(16, 185, 129, 0.9)'    
+        ],
+        borderColor: ['#fff', '#fff', '#fff'],
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const pieOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 9 } } },
+    },
+  };
+
   const categoryChartLabels = categories.map(c => c.name);
   const categoryChartData = categories.map(c => {
     return currentMonthExpenses
@@ -270,182 +310,179 @@ export default function ExpensesView({ onNavigate, selectedMonth }: ExpensesView
 
 
       {/* LOWER SPLIT: EXPENSE INPUT SYSTEM AND CATEGORY BREAKDOWN */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        
-        {/* EXPENSE ENTRY FORM CARD */}
-        <div className="bg-white border border-neutral-200/80 p-6 rounded-2xl shadow-xs lg:col-span-2">
-          
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-base font-bold text-neutral-900 tracking-tight">Post New Expense Entry</h3>
-            {profile?.fixedCommitments && currentMonthFixedExpenses.length === 0 && (
-              <button
-                onClick={handleAutoFillFixed}
-                className="text-[11px] font-bold bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 text-neutral-800 px-3 py-1.5 rounded-lg transition-all cursor-pointer font-sans"
-              >
-                📥 Pre-fill {profile.fixedCommitments.length} Fixed commitments
-              </button>
-            )}
-          </div>
+      <div className="flex flex-col gap-6">                
+              {/* EXPENSE ENTRY FORM CARD */}
+              <div className="bg-white border border-neutral-200/80 p-6 rounded-2xl shadow-xs lg:col-span-2">
+                
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-base font-bold text-neutral-900 tracking-tight">Log Daily Expense</h3>
+                  {profile?.fixedCommitments && currentMonthFixedExpenses.length === 0 && (
+                    <button
+                      onClick={handleAutoFillFixed}
+                      className="text-[11px] font-bold bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 text-neutral-800 px-3 py-1.5 rounded-lg transition-all cursor-pointer font-sans"
+                    >
+                      📥 Pre-fill {profile.fixedCommitments.length} Fixed commitments
+                    </button>
+                  )}
+                </div>
 
-          <form onSubmit={handleAddExpense} className="space-y-4">
-            
-            {/* Title & Amount row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Expense Item Title</label>
-                <input
-                  id="expense-title-input"
-                  type="text"
-                  required
-                  placeholder="e.g., Grocery Shopping, Auto commute"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm focus:border-neutral-900 focus:outline-none transition-all placeholder:text-neutral-300"
-                />
+                <form onSubmit={handleAddExpense} className="space-y-4">
+                  
+                  {/* Title & Amount row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Expense Item Title</label>
+                      <input
+                        id="expense-title-input"
+                        type="text"
+                        required
+                        placeholder="e.g., Grocery Shopping, Auto commute"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm focus:border-neutral-900 focus:outline-none transition-all placeholder:text-neutral-300"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Amount (₹)</label>
+                      <input
+                        id="expense-amount-input"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        required
+                        placeholder="e.g., 250"
+                        value={amount}
+                        onChange={(e) => {
+                          const clean = e.target.value.replace(/[^0-9]/g, '');
+                          setAmount(clean === '' ? '' : parseInt(clean, 10));
+                        }}
+                        className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm focus:border-neutral-900 focus:outline-none transition-all font-number placeholder:text-neutral-300 font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  {title.length > 0 && (
+                    <>
+                      {/* Classification Group */}
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Classification Group</label>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setType('Need')}
+                            className={`flex-1 py-3 text-xs rounded-xl border font-bold tracking-wide transition-all ${type === 'Need' ? 'bg-neutral-950 border-neutral-950 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100 hover:border-neutral-300'} cursor-pointer`}
+                          >
+                            Need
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setType('Want')}
+                            className={`flex-1 py-3 text-xs rounded-xl border font-bold tracking-wide transition-all ${type === 'Want' ? 'bg-rose-600 border-rose-600 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100 hover:border-neutral-300'} cursor-pointer`}
+                          >
+                            Want
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setType('Saving')}
+                            className={`flex-1 py-3 text-xs rounded-xl border font-bold tracking-wide transition-all ${type === 'Saving' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100 hover:border-neutral-300'} cursor-pointer`}
+                          >
+                            Saving
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Quick Favorites buttons */}
+                      <div>
+                        <span className="block text-[10px] uppercase font-bold tracking-wider text-neutral-400 mb-2">Assign Quick Categories</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {quickCategories.map((qc, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => {
+                                setCategory(qc.catName);
+                                // Auto pick type based on category
+                                const matchingCat = categories.find(c => c.name === qc.catName);
+                                if (matchingCat) setType(matchingCat.type);
+                              }}
+                              className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all ${category === qc.catName ? 'bg-neutral-950 border-neutral-950 text-white font-semibold' : 'bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100 hover:border-neutral-300'} cursor-pointer`}
+                            >
+                              {qc.icon} {qc.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Category selection */}
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Household Category</label>
+                        <select
+                          value={category}
+                          onChange={(e) => {
+                            const chosen = e.target.value;
+                            setCategory(chosen);
+                            const matchingCat = categories.find(c => c.name === chosen);
+                            if (matchingCat) setType(matchingCat.type);
+                          }}
+                          className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-3 text-sm focus:border-neutral-900 focus:outline-none transition-all"
+                        >
+                          {categories.map(cat => (
+                            <option key={cat.id} value={cat.name}>{cat.name} ({cat.type})</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Note & Date row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Optional Annotations (Note)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Bought from local ration shop, custom description"
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm focus:border-neutral-900 focus:outline-none transition-all placeholder:text-neutral-300"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Entry Date</label>
+                      <input
+                        type="date"
+                        value={expDate}
+                        onChange={(e) => setExpDate(e.target.value)}
+                        className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm focus:border-neutral-900 focus:outline-none transition-all font-number"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    id="btn-submit-expense"
+                    type="submit"
+                    className="w-full bg-neutral-900 hover:bg-neutral-800 text-white font-medium text-xs py-3.5 px-4 rounded-xl shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+                  >
+                    <Plus className="w-4 h-4" /> Save Expense Log
+                  </button>
+
+                </form>
+
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Amount (₹)</label>
-                <input
-                  id="expense-amount-input"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  required
-                  placeholder="e.g., 250"
-                  value={amount}
-                  onChange={(e) => {
-                    const clean = e.target.value.replace(/[^0-9]/g, '');
-                    setAmount(clean === '' ? '' : parseInt(clean, 10));
-                  }}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm focus:border-neutral-900 focus:outline-none transition-all font-number placeholder:text-neutral-300 font-bold"
-                />
-              </div>
-            </div>
-
-            {/* Quick Favorites buttons */}
-            <div>
-              <span className="block text-[10px] uppercase font-bold tracking-wider text-neutral-400 mb-2">Assign Quick Categories</span>
-              <div className="flex flex-wrap gap-1.5">
-                {quickCategories.map((qc, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      setCategory(qc.catName);
-                      // Auto pick type based on category
-                      const matchingCat = categories.find(c => c.name === qc.catName);
-                      if (matchingCat) setType(matchingCat.type);
-                    }}
-                    className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all ${category === qc.catName ? 'bg-neutral-950 border-neutral-950 text-white font-semibold' : 'bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100 hover:border-neutral-300'} cursor-pointer`}
-                  >
-                    {qc.icon} {qc.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Category selection and Class type */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Household Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => {
-                    const chosen = e.target.value;
-                    setCategory(chosen);
-                    const matchingCat = categories.find(c => c.name === chosen);
-                    if (matchingCat) setType(matchingCat.type);
-                  }}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-3 text-sm focus:border-neutral-900 focus:outline-none transition-all"
-                >
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.name}>{cat.name} ({cat.type})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Classification Group</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setType('Need')}
-                    className={`flex-1 py-3 text-xs rounded-xl border font-bold tracking-wide transition-all ${type === 'Need' ? 'bg-neutral-950 border-neutral-950 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100 hover:border-neutral-300'} cursor-pointer`}
-                  >
-                    Need
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setType('Want')}
-                    className={`flex-1 py-3 text-xs rounded-xl border font-bold tracking-wide transition-all ${type === 'Want' ? 'bg-rose-600 border-rose-600 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100 hover:border-neutral-300'} cursor-pointer`}
-                  >
-                    Want
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setType('Saving')}
-                    className={`flex-1 py-3 text-xs rounded-xl border font-bold tracking-wide transition-all ${type === 'Saving' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100 hover:border-neutral-300'} cursor-pointer`}
-                  >
-                    Saving
-                  </button>
+              {/* PIE CHART CARD */}
+              <div className="bg-white border border-neutral-200/80 p-6 rounded-2xl shadow-xs lg:col-span-1 flex flex-col justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-neutral-900 tracking-tight mb-1">Needs vs Wants vs Savings</h4>
+                  <span className="text-[10px] text-neutral-400 block mb-4">Pie breakdown for logged expenses</span>
+                </div>
+                
+                <div className="relative h-48 flex items-center justify-center">
+                  <Pie data={pieData} options={pieOptions} />
                 </div>
               </div>
             </div>
-
-            {/* Note & Date row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Optional Annotations (Note)</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Bought from local ration shop, custom description"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm focus:border-neutral-900 focus:outline-none transition-all placeholder:text-neutral-300"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Entry Date</label>
-                <input
-                  type="date"
-                  value={expDate}
-                  onChange={(e) => setExpDate(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm focus:border-neutral-900 focus:outline-none transition-all font-number"
-                />
-              </div>
-            </div>
-
-            <button
-              id="btn-submit-expense"
-              type="submit"
-              className="w-full bg-neutral-900 hover:bg-neutral-800 text-white font-medium text-xs py-3.5 px-4 rounded-xl shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
-            >
-              <Plus className="w-4 h-4" /> Save Expense Log
-            </button>
-
-          </form>
-
-        </div>
-
-        {/* HORIZONTAL BAR: CATEGORY BREAKDOWN VISUALIZER */}
-        <div className="bg-white border border-neutral-200/80 p-6 rounded-2xl shadow-xs lg:col-span-1 h-full flex flex-col justify-between">
-          <div>
-            <h4 className="text-sm font-bold text-neutral-900 tracking-tight mb-1">Monthly category breakdown</h4>
-            <span className="text-[10px] text-neutral-400 block mb-4">Shows total sum logged in individual containers</span>
-          </div>
-
-          <div className="h-64 mt-2">
-            <Bar data={horizontalBarData} options={horizontalBarOptions} />
-          </div>
-
-          <p className="text-[10px] text-neutral-400 italic text-center font-sans font-light mt-4">
-            🎨 Neutral = Needs. Red = Wants. Green = Savings.
-          </p>
-        </div>
-
-      </div>
 
       {/* FILTERABLE EXPENSE LIST COMPONENT */}
       <div className="bg-white border border-neutral-200/80 rounded-2xl shadow-xs p-6">

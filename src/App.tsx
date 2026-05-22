@@ -330,10 +330,10 @@ export default function App() {
                 <button
                   onClick={() => navigateTo('expenses')}
                   className={`flex items-center gap-2.5 text-xs px-4 py-3 rounded-xl font-bold transition-all cursor-pointer text-left w-full ${currentRoute === 'expenses' ? 'bg-neutral-900 text-white' : 'text-neutral-600 hover:bg-neutral-100'}`}
-                  title="Expense Tracking"
+                  title="Expense Entry"
                 >
                   <CreditCard className="w-4 h-4 shrink-0" />
-                  {!sidebarCollapsed && <span>Expense Tracking</span>}
+                  {!sidebarCollapsed && <span>Expense Entry</span>}
                 </button>
 
                 <button

@@ -91,6 +91,8 @@ export interface BudgetyProfile {
   dailyNotesEnabled: boolean;
   alertsEnabled: boolean;
   trackNoteShortcutAdded?: boolean;
+  telegramNotificationsEnabled?: boolean;
+  phoneNumber?: string;
 }
 
 export interface MonthlyBill {

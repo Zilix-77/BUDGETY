@@ -12,7 +12,7 @@ import {
   LineElement, 
   Title 
 } from 'chart.js';
-import { Doughnut, Bar, Line } from 'react-chartjs-2';
+import { Pie, Bar, Line } from 'react-chartjs-2';
 import { 
   Calendar, 
   Zap, 
@@ -161,8 +161,8 @@ export default function DashboardView({
   // Custom Categories list
   const categoriesList = getCategories();
 
-  // 1. DOUGHNUT CHART CARD (Needs vs Wants vs Savings)
-  const doughnutData = {
+  // 1. PIE CHART CARD (Needs vs Wants vs Savings)
+  const pieData = {
     labels: ['Needs (Essential)', 'Wants (Discretionary)', 'Savings (Future Self)'],
     datasets: [
       {
@@ -182,7 +182,7 @@ export default function DashboardView({
     ],
   };
 
-  const doughnutOptions = {
+  const pieOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -200,7 +200,6 @@ export default function DashboardView({
         }
       }
     },
-    cutout: '72%',
   };
 
   // 2. BAR CHART CARD (Monthly Comparison)
@@ -620,13 +619,7 @@ export default function DashboardView({
           </div>
           
           <div className="relative h-48 flex items-center justify-center">
-            <Doughnut data={doughnutData} options={doughnutOptions} />
-            <div className="absolute flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-xs text-neutral-400 uppercase tracking-widest font-mono font-medium">Spent Ratio</span>
-              <span className="text-lg font-black text-neutral-900 font-number">
-                {totalIncome > 0 ? `${Math.round((totalSpent / totalIncome) * 100)}%` : '0%'}
-              </span>
-            </div>
+            <Pie data={pieData} options={pieOptions} />
           </div>
 
           <div className="space-y-2.5 mt-5">
