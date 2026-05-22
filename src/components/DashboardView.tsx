@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import { 
   Chart as ChartJS, 
   ArcElement, 
@@ -408,6 +410,33 @@ export default function DashboardView({
     }
   };
 
+  const handleDownloadPdf = () => {
+    const doc = new jsPDF();
+    doc.text(`Budget Report - ${selectedYearMonth}`, 14, 15);
+    
+    // Add Summary
+    doc.autoTable({
+      head: [['Metric', 'Amount (₹)']],
+      body: [
+        ['Total Income', totalIncome],
+        ['Total Spent', totalSpent],
+        ['Total Saved', totalSaved],
+        ['Remaining Balance', remainingBalance]
+      ],
+      startY: 25
+    });
+    
+    // Add expenses list (simplified)
+    const tableBody = currentMonthExpenses.map(e => [e.date, e.title, e.amount, e.type]);
+    doc.autoTable({
+        head: [['Date', 'Item', 'Amount', 'Type']],
+        body: tableBody,
+        startY: (doc as any).lastAutoTable.finalY + 10
+    });
+
+    doc.save(`budget_report_${selectedYearMonth}.pdf`);
+  };
+
   const handleSaveSpecialTag = () => {
     const updated = [
       ...specialMonths,
@@ -528,6 +557,14 @@ export default function DashboardView({
           >
             <Zap className={`w-3.5 h-3.5 ${activeSpecialTag ? 'fill-amber-600 stroke-amber-900' : ''}`} />
             {activeSpecialTag ? `Tagged: ${activeSpecialTag.reason}` : "⚡ Mark as Special Month"}
+          </button>
+          
+          <button
+            onClick={handleDownloadPdf}
+            className="inline-flex items-center gap-1.5 text-xs font-bold bg-neutral-100 hover:bg-neutral-200 text-neutral-800 px-3 py-2 rounded-xl transition-all cursor-pointer border border-neutral-200 shadow-xs"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Export PDF
           </button>
         </div>
       </div>

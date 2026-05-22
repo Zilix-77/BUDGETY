@@ -155,10 +155,10 @@ export default function PresetsView({ onNavigate, selectedMonth }: PresetsViewPr
         <div>
           <h2 className="text-xl md:text-2xl font-black tracking-tight text-neutral-900 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-500" />
-            Budget % Presets & Investments
+            Presets
           </h2>
           <p className="text-xs text-neutral-500 font-light mt-0.5">
-            Calibrate your income lockouts mathematically and leverage clean secure investment instruments to scale savings.
+            Calibrate your income lockouts mathematically.
           </p>
         </div>
         <div className="bg-neutral-50 border border-neutral-200 rounded-xl px-4.5 py-2 shrink-0">
