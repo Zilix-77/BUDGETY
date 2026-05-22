@@ -379,7 +379,7 @@ export default function DashboardView({
   const triggerAlerts = (): string[] => {
     const list: string[] = [];
     
-    // Alert: Overspending on any custom categories compared to budget limits
+  // Alert: Overspending on any custom categories compared to budget limits
     categoriesList.forEach(cat => {
       const catSpent = currentMonthExpenses
         .filter(e => e.category === cat.name)
@@ -501,6 +501,21 @@ export default function DashboardView({
 
   const dashboardSuggestions = triggerSuggestions();
   const dashboardAlerts = triggerAlerts();
+
+  // Auto-send alerts to Telegram
+  /*
+  useEffect(() => {
+    if (dashboardAlerts.length > 0 && profile?.telegramChatId) {
+      dashboardAlerts.forEach(alertText => {
+        fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chatId: profile.telegramChatId, message: alertText })
+        }).catch(err => console.error("Failed to send telegram alert", err));
+      });
+    }
+  }, [dashboardAlerts, profile?.telegramChatId]);
+  */
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 font-sans">

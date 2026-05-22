@@ -873,6 +873,7 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
                 </div>
               </div>
               
+              {/*
               <div className="bg-blue-50 rounded-2xl border border-blue-200/50 p-5 mb-5 text-blue-950 font-sans text-xs">
                 <label className="flex items-center gap-3 font-bold mb-2">
                   <input
@@ -894,6 +895,7 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
                   />
                 )}
               </div>
+              */}
 
               <div className="flex gap-4 font-sans justify-center">
                 <button
