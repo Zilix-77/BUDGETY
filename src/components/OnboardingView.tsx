@@ -264,26 +264,7 @@ export default function OnboardingView({ userName, userEmail, onCompleteOnboardi
           />
         </div>
         
-        {/* Navigation Wrapper Button */}
-        <div className="flex justify-between mt-6">
-          <button
-            onClick={() => setStep(Math.max(1, step - 1))}
-            disabled={step === 1}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${step === 1 ? 'opacity-0' : 'bg-neutral-200 hover:bg-neutral-300'}`}
-          >
-            ← Back
-          </button>
-          
-          <button
-            onClick={() => {
-              if (step === totalSteps) handleFinish();
-              else setStep(Math.min(totalSteps, step + 1));
-            }}
-            className="bg-neutral-900 text-white px-6 py-2 rounded-xl text-xs font-bold hover:bg-neutral-800 transition-all cursor-pointer"
-          >
-            {step === totalSteps ? 'Finish Setup' : 'Next →'}
-          </button>
-        </div>
+
       </div>
 
       {/* Primary Card Viewport */}
