@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
 import { 
   Chart as ChartJS, 
   ArcElement, 
@@ -412,30 +410,7 @@ export default function DashboardView({
   };
 
   const handleDownloadPdf = () => {
-    const doc = new jsPDF();
-    doc.text(`Budget Report - ${selectedYearMonth}`, 14, 15);
-    
-    // Add Summary
-    (doc as any).autoTable({
-      head: [['Metric', 'Amount (₹)']],
-      body: [
-        ['Total Income', totalIncome],
-        ['Total Spent', totalSpent],
-        ['Total Saved', totalSaved],
-        ['Remaining Balance', remainingBalance]
-      ],
-      startY: 25
-    });
-    
-    // Add expenses list (simplified)
-    const tableBody = currentMonthExpenses.map(e => [e.date, e.title, e.amount, e.type]);
-    (doc as any).autoTable({
-        head: [['Date', 'Item', 'Amount', 'Type']],
-        body: tableBody,
-        startY: (doc as any).lastAutoTable.finalY + 10
-    });
-
-    doc.save(`budget_report_${selectedYearMonth}.pdf`);
+    window.print();
   };
 
   const handleSaveSpecialTag = () => {
