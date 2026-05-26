@@ -109,4 +109,3 @@ npm start
 In accordance with India's **DPDP Act 2023** and **IT Intermediary Rules 2021**:
 * Data collected (strictly restricted to budget transactions and system profiles) is stored securely on decentralized Google Cloud Firestore instances with active user permissions to clear or delete history at any time from Settings.
 * Standard compliance views are fully linked from the footer and accessible directly on-hash without forcing pre-authenticated user sessions.
-

@@ -56,6 +56,16 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Strict HTTP Security Headers Middleware
+  app.use((req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    // Remove headers leaking implementation details
+    res.removeHeader("X-Powered-By");
+    next();
+  });
+
   // API route for Telegram notifications with validation and rate-limiting
   app.post("/api/notify", notifyLimiter, async (req, res) => {
     const requestId = crypto.randomUUID();

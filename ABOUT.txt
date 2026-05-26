@@ -1,0 +1,37 @@
+========================================================================
+📊 BUDGETY — INTELLIGENT MULTI-USER FAMILY BUDGET TRACKER
+========================================================================
+
+Budgety is a professional, high-performance, and legally-compliant multi-user household financial planner designed for smart family expense tracking. Crafted intentionally under a clean Swiss-Minimalist canvas (slate accents, generous negative space, and custom typography pairings), it balances robust features with silent, secure architecture.
+
+*** Key Features & Modules ***
+- Dual-Authentication: Step inside instantly with an offline-first sandboxed local Profile, or secure your dashboard with modern Google Single-Sign-On via Firebase Auth.
+- Multi-User Cloud Synchronization: Automatic background thread synchronization reconciles local browser caches to scalable Google Cloud Firestore backends without blockages or data races.
+- Custom Envelope Category Budgets: Configure standard pre-set categories (Groceries, Fuel, Medical, Bills, and Tea & Snacks) with monthly limit targets.
+- Peer-to-Peer IOTracker Ledger: Keep clean records of hand-to-hand money given or received back from relatives, friends, or neighbors.
+- Recurring Bills Planner: Track continuous utility commitments, home rent, and recurring household expenses.
+- 3-Day Rolling Scratchpad Archive: Dynamic text scratchpad that automatically rolls aged inputs into deep chronological records.
+- Complete Compliance: Built-in stationary legal disclaimers, cookies, terms of use, and privacy policy views fully updated to support India's DPDP Act 2023 and the EU’s blockwide GDPR guidelines.
+
+*** Technical Architecture Stack ***
+- Frontend Framework: React 18+ (TypeScript)
+- Asset Pipeline & Dev Server: Vite & tsx Node runtime (Port 3000)
+- Visual Framework: Tailwind CSS utility layers
+- Animations: motion/react hardware-accelerated micro-animations
+- Database & Sync: Google Cloud Firestore + client-side transactional reconcilers
+- Server Proxy: Node Express backend (with strict Zod validation schemas and dynamic rate-limiting guards against spam attacks)
+
+*** Why it is 100% Safe to Commit to Public Git Sources ***
+1. Zero Code-Sec Hardcoded Vulnerabilities: Sensitive tokens (such as telemetry arrays, private configurations, or Telegram Bot tokens) are strictly excluded from git tracking. These are loaded locally using background `.env` files or standard secure Environment variables.
+2. Safe Public Configurations: Parameters present inside `./firebase-applet-config.json` (like apiKey and appId) are designed by Google to be completely public. They dictate where client traffic routes and grant no administrative permissions.
+3. Decisive Cloud Enforcements: User data verification is not left to frontend filters. Strict `/firestore.rules` deployed at cloud endpoints declare that only client requests holding valid session headers congruent with `request.auth.uid` can mutate documents matching `users/{userId}/**`.
+
+*** Quick Launch Instructions ***
+1. Run "npm install" to populate dependency directories.
+2. Initialize environment parameters in your private root ".env" folder.
+3. Launch development bundles via "npm run dev".
+4. Build fully compiled distribution structures utilizing "npm run build".
+
+========================================================================
+Created with care by EZYPC (adarsh.7025.v@gmail.com). Free to deploy & clone.
+========================================================================

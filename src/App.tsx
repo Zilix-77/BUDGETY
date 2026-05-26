@@ -33,7 +33,7 @@ import SettingsView from './components/SettingsView';
 import GoalsView from './components/GoalsView';
 import PresetsView from './components/PresetsView';
 import BillsView from './components/BillsView';
-import { PrivacyView, TermsView, DisclaimerView, CookiesView } from './components/LegalViews';
+import { PrivacyView, TermsView, DisclaimerView, CookiesView, AboutView } from './components/LegalViews';
 import { 
   LogOut, 
   TrendingUp, 
@@ -332,6 +332,7 @@ export default function App() {
   if (currentRoute === 'terms') return <TermsView onNavigate={navigateTo} />;
   if (currentRoute === 'disclaimer') return <DisclaimerView onNavigate={navigateTo} />;
   if (currentRoute === 'cookies') return <CookiesView onNavigate={navigateTo} />;
+  if (currentRoute === 'about') return <AboutView onNavigate={navigateTo} />;
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col justify-between selection:bg-neutral-900 selection:text-white">
@@ -693,6 +694,7 @@ function Footer({ onNavigate }: { onNavigate: (route: string) => void }) {
           <span className="text-neutral-500">Crafted in India for smart family budget tracking</span>
         </div>
         <div className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 font-bold text-neutral-600">
+          <button onClick={() => onNavigate('about')} className="hover:text-black cursor-pointer transition-colors">About Us</button>
           <button onClick={() => onNavigate('privacy')} className="hover:text-black cursor-pointer transition-colors">Privacy Policy</button>
           <button onClick={() => onNavigate('terms')} className="hover:text-black cursor-pointer transition-colors">Terms of Service</button>
           <button onClick={() => onNavigate('disclaimer')} className="hover:text-black cursor-pointer transition-colors">Financial Disclaimer</button>

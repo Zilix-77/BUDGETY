@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, BookOpen, AlertTriangle, Database, ArrowLeft, Trash2 } from 'lucide-react';
+import { Shield, BookOpen, AlertTriangle, Database, ArrowLeft, Trash2, Info } from 'lucide-react';
 
 interface LegalLayoutProps {
   title: string;
@@ -236,3 +236,38 @@ export function CookiesView({ onNavigate }: { onNavigate: (route: string) => voi
     </LegalLayout>
   );
 }
+
+// 5. ABOUT VIEW (SMALL "ABOUT US")
+export function AboutView({ onNavigate }: { onNavigate: (route: string) => void }) {
+  return (
+    <LegalLayout title="About Budgety" icon={<Info className="w-5 h-5 text-neutral-100" />} onNavigate={onNavigate}>
+      <div className="space-y-6">
+        <p className="text-neutral-500 text-xs italic">Last updated: May 26, 2026</p>
+        
+        <p>
+          <strong>Budgety</strong> is an intelligent, high-performance visual financial assistant crafted designed to bring structure, transparency, and health to household budgets. Built in India, it features an elegant Swiss-Minimalist appearance that focuses on the core mechanics of personal bookkeeping without clutter, banners, or data selling.
+        </p>
+
+        <h3 className="text-base font-bold text-neutral-900 mt-6 mb-2">Our Mission & Principles</h3>
+        <p>
+          We believe financial planning tools should be personal, direct, and completely free of commercial surveillance. Budgety operates on three core design pillars:
+        </p>
+        <ul className="list-disc list-inside space-y-2.5 pl-4">
+          <li><strong>Absolute Client Sovereignty</strong>: Your numbers are yours alone. All records live locally inside your web browser. Even when connected to our optional, low-latency Google Firebase core synchronization pipeline for family sharing, and standard Single Sign-On, your financial details are securely safeguarded by robust, rule-enforced credentials.</li>
+          <li><strong>Aesthetic Clarity</strong>: Distractions are excluded. Utilizing beautiful negative space, precise margins, and <strong>JetBrains Mono</strong> display panels, your financial limits remain legible and clear across all browser frames.</li>
+          <li><strong>Realistic Scenarios</strong>: Budgety is tailor-made to handle physical life events (such as tracking peer-to-peer personal loans, handling summer bill peaks, managing recurring household commitments, and calculating flexible custom savings goals).</li>
+        </ul>
+
+        <h3 className="text-base font-bold text-neutral-900 mt-6 mb-2">Our Architecture</h3>
+        <p>
+          Budgety runs a hybrid, real-time client-to-cloud reconciler. By pairing high-speed localized caches in your browser with secure backend Cloud Firestore containers, users enjoy immediate rendering in sub-millisecond response times, without risk of offline write blocking or credential leakages.
+        </p>
+
+        <p className="pt-4 border-t border-neutral-100">
+          Created with care by <strong>EZYPC</strong>. For feedback, legal guidelines, or technical support, drop us a line directly at <a href="mailto:adarsh.7025.v@gmail.com" className="text-neutral-950 underline font-semibold">adarsh.7025.v@gmail.com</a>.
+        </p>
+      </div>
+    </LegalLayout>
+  );
+}
+
