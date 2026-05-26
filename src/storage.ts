@@ -12,6 +12,16 @@ import {
   FixedCommitment,
   MonthlyBill
 } from './types';
+import { db, auth, handleFirestoreError, OperationType } from './lib/firebase';
+import { 
+  doc, 
+  getDoc, 
+  getDocs, 
+  setDoc, 
+  deleteDoc, 
+  collection, 
+  writeBatch 
+} from 'firebase/firestore';
 
 // Default categories as defined by specifications
 export const DEFAULT_CATEGORIES: CustomCategory[] = [
@@ -55,6 +65,199 @@ const getKey = (baseKey: string): string => {
   return baseKey;
 };
 
+// HELPER: Convert Email string to a safe LocalStorage segment
+const getSafeEmailKeySegment = (email: string): string => {
+  return email.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+};
+
+// FIRESTORE SYNC: Reconcile list arrays safely to prevent update gaps or orphans
+export const syncArrayToFirestore = async <T extends { id: string }>(
+  collectionName: string,
+  items: T[]
+): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) return;
+  
+  const path = `users/${user.uid}/${collectionName}`;
+  try {
+    const colRef = collection(db, `users/${user.uid}/${collectionName}`);
+    // 1. Fetch current remote elements
+    const snapshot = await getDocs(colRef);
+    const existingIds = snapshot.docs.map(doc => doc.id);
+    const incomingIds = new Set(items.map(item => item.id));
+    
+    const batch = writeBatch(db);
+    let actionCount = 0;
+    
+    // 2. Identify elements deleted locally to remove remotely
+    for (const docId of existingIds) {
+      if (!incomingIds.has(docId)) {
+        const docRef = doc(db, path, docId);
+        batch.delete(docRef);
+        actionCount++;
+      }
+    }
+    
+    // 3. Sync additions & edits
+    for (const item of items) {
+      const docRef = doc(db, path, item.id);
+      batch.set(docRef, item);
+      actionCount++;
+    }
+    
+    if (actionCount > 0) {
+      await batch.commit();
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+// FIRESTORE SYNC: Past month summaries (reconciled by monthKey)
+export const syncMonthHistoryToFirestore = async (history: PastMonthSummary[]): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const path = `users/${user.uid}/monthhistory`;
+  try {
+    const colRef = collection(db, `users/${user.uid}/monthhistory`);
+    const snapshot = await getDocs(colRef);
+    const existingIds = snapshot.docs.map(doc => doc.id);
+    const incomingIds = new Set(history.map(item => item.monthKey));
+
+    const batch = writeBatch(db);
+    let actionCount = 0;
+
+    for (const docId of existingIds) {
+      if (!incomingIds.has(docId)) {
+        const docRef = doc(db, path, docId);
+        batch.delete(docRef);
+        actionCount++;
+      }
+    }
+
+    for (const item of history) {
+      const docRef = doc(db, path, item.monthKey);
+      batch.set(docRef, item);
+      actionCount++;
+    }
+
+    if (actionCount > 0) {
+      await batch.commit();
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+// FIRESTORE SYNC: Special Month Designation tags (reconciled by monthKey)
+export const syncSpecialMonthsToFirestore = async (special: SpecialMonthTag[]): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const path = `users/${user.uid}/specialmonths`;
+  try {
+    const colRef = collection(db, `users/${user.uid}/specialmonths`);
+    const snapshot = await getDocs(colRef);
+    const existingIds = snapshot.docs.map(doc => doc.id);
+    const incomingIds = new Set(special.map(item => item.monthKey));
+
+    const batch = writeBatch(db);
+    let actionCount = 0;
+
+    for (const docId of existingIds) {
+      if (!incomingIds.has(docId)) {
+        const docRef = doc(db, path, docId);
+        batch.delete(docRef);
+        actionCount++;
+      }
+    }
+
+    for (const item of special) {
+      const docRef = doc(db, path, item.monthKey);
+      batch.set(docRef, item);
+      actionCount++;
+    }
+
+    if (actionCount > 0) {
+      await batch.commit();
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+// FIRESTORE ACTION: Restore all synced collections to LocalStorage scope on login
+export const downloadAllAndSyncLocal = async (uid: string, email: string): Promise<boolean> => {
+  const safeEmail = getSafeEmailKeySegment(email);
+  try {
+    const profileDocRef = doc(db, 'users', uid);
+    const profileSnap = await getDoc(profileDocRef);
+    if (!profileSnap.exists()) {
+      return false; // Profile doesn't exist, need onboarding
+    }
+    
+    const profileData = profileSnap.data();
+    localStorage.setItem(`${KEYS.PROFILE}_${safeEmail}`, JSON.stringify(profileData));
+    
+    const [
+      expensesSnap,
+      categoriesSnap,
+      goalsSnap,
+      notesArchiveSnap,
+      iotrackerSnap,
+      billsSnap,
+      historySnap,
+      specialSnap,
+      scratchNoteSnap
+    ] = await Promise.all([
+      getDocs(collection(db, `users/${uid}/expenses`)),
+      getDocs(collection(db, `users/${uid}/categories`)),
+      getDocs(collection(db, `users/${uid}/goals`)),
+      getDocs(collection(db, `users/${uid}/notes_archive`)),
+      getDocs(collection(db, `users/${uid}/iotracker`)),
+      getDocs(collection(db, `users/${uid}/bills`)),
+      getDocs(collection(db, `users/${uid}/monthhistory`)),
+      getDocs(collection(db, `users/${uid}/specialmonths`)),
+      getDoc(doc(db, `users/${uid}/notes/scratchpad`))
+    ]);
+
+    const expenses = expensesSnap.docs.map(doc => doc.data());
+    localStorage.setItem(`${KEYS.EXPENSES}_${safeEmail}`, JSON.stringify(expenses));
+
+    const categories = categoriesSnap.docs.map(doc => doc.data());
+    localStorage.setItem(`${KEYS.CATEGORIES}_${safeEmail}`, JSON.stringify(categories));
+
+    const goals = goalsSnap.docs.map(doc => doc.data());
+    localStorage.setItem(`${KEYS.GOALS}_${safeEmail}`, JSON.stringify(goals));
+
+    const archive = notesArchiveSnap.docs.map(doc => doc.data());
+    localStorage.setItem(`${KEYS.NOTES_ARCHIVE}_${safeEmail}`, JSON.stringify(archive));
+
+    const iotrack = iotrackerSnap.docs.map(doc => doc.data());
+    localStorage.setItem(`${KEYS.IO_TRACKER}_${safeEmail}`, JSON.stringify(iotrack));
+
+    const bills = billsSnap.docs.map(doc => doc.data());
+    localStorage.setItem(`${KEYS.BILLS}_${safeEmail}`, JSON.stringify(bills));
+
+    const history = historySnap.docs.map(doc => doc.data());
+    localStorage.setItem(`${KEYS.MONTH_HISTORY}_${safeEmail}`, JSON.stringify(history));
+
+    const special = specialSnap.docs.map(doc => doc.data());
+    localStorage.setItem(`${KEYS.SPECIAL_MONTHS}_${safeEmail}`, JSON.stringify(special));
+
+    if (scratchNoteSnap.exists()) {
+      localStorage.setItem(`${KEYS.NOTES}_${safeEmail}`, JSON.stringify(scratchNoteSnap.data()));
+    } else {
+      localStorage.removeItem(`${KEYS.NOTES}_${safeEmail}`);
+    }
+
+    return true;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `users/${uid}`);
+  }
+};
+
 export const getUserAuth = (): UserAuth | null => {
   const data = localStorage.getItem(KEYS.USER);
   return data ? JSON.parse(data) : null;
@@ -76,8 +279,20 @@ export const getProfile = (): BudgetyProfile | null => {
 export const setProfile = (profile: BudgetyProfile | null): void => {
   if (profile) {
     localStorage.setItem(getKey(KEYS.PROFILE), JSON.stringify(profile));
+    const user = auth.currentUser;
+    if (user) {
+      setDoc(doc(db, 'users', user.uid), profile).catch(err => 
+        handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`)
+      );
+    }
   } else {
     localStorage.removeItem(getKey(KEYS.PROFILE));
+    const user = auth.currentUser;
+    if (user) {
+      deleteDoc(doc(db, 'users', user.uid)).catch(err =>
+        handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}`)
+      );
+    }
   }
 };
 
@@ -87,7 +302,17 @@ export const getExpenses = (): Expense[] => {
 };
 
 export const setExpenses = (expenses: Expense[]): void => {
-  localStorage.setItem(getKey(KEYS.EXPENSES), JSON.stringify(expenses));
+  const payloadStr = JSON.stringify(expenses);
+  const isDev = typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname.includes('ais-dev-')
+  );
+  if (isDev && payloadStr.length > 2 * 1024 * 1024) {
+    console.warn("Warning: localStorage approaching limit. Consider migrating to IndexedDB.");
+  }
+  localStorage.setItem(getKey(KEYS.EXPENSES), payloadStr);
+  syncArrayToFirestore('expenses', expenses);
 };
 
 export const getCategories = (): CustomCategory[] => {
@@ -102,6 +327,7 @@ export const getCategories = (): CustomCategory[] => {
 
 export const setCategories = (categories: CustomCategory[]): void => {
   localStorage.setItem(getKey(KEYS.CATEGORIES), JSON.stringify(categories));
+  syncArrayToFirestore('categories', categories);
 };
 
 export const getGoals = (): SavingsGoal[] => {
@@ -111,6 +337,7 @@ export const getGoals = (): SavingsGoal[] => {
 
 export const setGoals = (goals: SavingsGoal[]): void => {
   localStorage.setItem(getKey(KEYS.GOALS), JSON.stringify(goals));
+  syncArrayToFirestore('goals', goals);
 };
 
 export const getScratchpadNote = (): ScratchpadNote => {
@@ -125,6 +352,12 @@ export const getScratchpadNote = (): ScratchpadNote => {
 
 export const setScratchpadNote = (note: ScratchpadNote): void => {
   localStorage.setItem(getKey(KEYS.NOTES), JSON.stringify(note));
+  const user = auth.currentUser;
+  if (user) {
+    setDoc(doc(db, `users/${user.uid}/notes/scratchpad`), note).catch(err =>
+      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/notes/scratchpad`)
+    );
+  }
 };
 
 export const getScratchpadArchive = (): ScratchpadArchive[] => {
@@ -134,6 +367,7 @@ export const getScratchpadArchive = (): ScratchpadArchive[] => {
 
 export const setScratchpadArchive = (archive: ScratchpadArchive[]): void => {
   localStorage.setItem(getKey(KEYS.NOTES_ARCHIVE), JSON.stringify(archive));
+  syncArrayToFirestore('notes_archive', archive);
 };
 
 export const getIOTracker = (): IOTrackerEntry[] => {
@@ -143,6 +377,7 @@ export const getIOTracker = (): IOTrackerEntry[] => {
 
 export const setIOTracker = (entries: IOTrackerEntry[]): void => {
   localStorage.setItem(getKey(KEYS.IO_TRACKER), JSON.stringify(entries));
+  syncArrayToFirestore('iotracker', entries);
 };
 
 export const getMonthlyBills = (): MonthlyBill[] => {
@@ -152,6 +387,7 @@ export const getMonthlyBills = (): MonthlyBill[] => {
 
 export const setMonthlyBills = (bills: MonthlyBill[]): void => {
   localStorage.setItem(getKey(KEYS.BILLS), JSON.stringify(bills));
+  syncArrayToFirestore('bills', bills);
 };
 
 export const getMonthHistory = (): PastMonthSummary[] => {
@@ -161,6 +397,7 @@ export const getMonthHistory = (): PastMonthSummary[] => {
 
 export const setMonthHistory = (history: PastMonthSummary[]): void => {
   localStorage.setItem(getKey(KEYS.MONTH_HISTORY), JSON.stringify(history));
+  syncMonthHistoryToFirestore(history);
 };
 
 export const getSpecialMonths = (): SpecialMonthTag[] => {
@@ -170,6 +407,7 @@ export const getSpecialMonths = (): SpecialMonthTag[] => {
 
 export const setSpecialMonths = (special: SpecialMonthTag[]): void => {
   localStorage.setItem(getKey(KEYS.SPECIAL_MONTHS), JSON.stringify(special));
+  syncSpecialMonthsToFirestore(special);
 };
 
 // Check if scratchpad note requires archiving due to three-day-rule

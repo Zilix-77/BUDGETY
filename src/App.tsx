@@ -17,8 +17,11 @@ import {
   setExpenses,
   clearSampleData,
   getScratchpadNote,
-  setScratchpadNote
+  setScratchpadNote,
+  downloadAllAndSyncLocal
 } from './storage';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, logoutUser } from './lib/firebase';
 import { UserAuth, BudgetyProfile, PastMonthSummary, Expense } from './types';
 import LandingView from './components/LandingView';
 import LoginView from './components/LoginView';
@@ -30,6 +33,7 @@ import SettingsView from './components/SettingsView';
 import GoalsView from './components/GoalsView';
 import PresetsView from './components/PresetsView';
 import BillsView from './components/BillsView';
+import { PrivacyView, TermsView, DisclaimerView, CookiesView } from './components/LegalViews';
 import { 
   LogOut, 
   TrendingUp, 
@@ -117,6 +121,21 @@ export default function App() {
       const hash = window.location.hash;
       const auth = getUserAuth();
 
+      // Check legal static page routes first so they are fully accessible without login
+      if (hash === '#/privacy') {
+        setCurrentRoute('privacy');
+        return;
+      } else if (hash === '#/terms') {
+        setCurrentRoute('terms');
+        return;
+      } else if (hash === '#/disclaimer') {
+        setCurrentRoute('disclaimer');
+        return;
+      } else if (hash === '#/cookies') {
+        setCurrentRoute('cookies');
+        return;
+      }
+
       if (!auth || !auth.loggedIn) {
         if (hash === '#/signup') {
           setCurrentRoute('signup');
@@ -154,6 +173,43 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // Real-time Firebase Auth monitoring and session synchronization
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        const emailToUse = fbUser.email || '';
+        const nameToUse = fbUser.displayName || emailToUse.split('@')[0] || 'Google User';
+        
+        const cachedAuth = getUserAuth();
+        if (!cachedAuth || !cachedAuth.loggedIn || cachedAuth.email !== emailToUse) {
+          // Returning user: Synchronise Cloud Firestore records down to LocalStorage
+          await downloadAllAndSyncLocal(fbUser.uid, emailToUse);
+          
+          setUserAuth({
+            name: nameToUse,
+            email: emailToUse,
+            loggedIn: true
+          });
+        }
+        
+        loadStateFromStorage();
+        
+        // Re-run route checking so we transition to authenticated screens
+        const hash = window.location.hash;
+        if (hash === '' || hash === '#/' || hash === '#/login' || hash === '#/signup') {
+          const prof = getProfile();
+          if (!prof || !prof.onboarded) {
+            window.location.hash = '#/onboarding';
+          } else {
+            window.location.hash = '#/expenses';
+          }
+        }
+      }
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
   // Update hash route change manually
   const navigateTo = (route: string) => {
     if (route === 'landing') window.location.hash = '#/';
@@ -166,6 +222,10 @@ export default function App() {
     else if (route === 'goals') window.location.hash = '#/goals';
     else if (route === 'presets') window.location.hash = '#/presets';
     else if (route === 'bills') window.location.hash = '#/bills';
+    else if (route === 'privacy') window.location.hash = '#/privacy';
+    else if (route === 'terms') window.location.hash = '#/terms';
+    else if (route === 'disclaimer') window.location.hash = '#/disclaimer';
+    else if (route === 'cookies') window.location.hash = '#/cookies';
   };
 
   const handleLoginSuccess = (name: string, email: string) => {
@@ -188,9 +248,14 @@ export default function App() {
     navigateTo('expenses');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setUserAuth(null);
     setUser(null);
+    try {
+      await logoutUser();
+    } catch (err) {
+      console.error("Firebase logout error:", err);
+    }
     navigateTo('landing');
   };
 
@@ -262,6 +327,11 @@ export default function App() {
     setSelectedMonth('2026-06');
     setShowResetSimulation(true);
   };
+
+  if (currentRoute === 'privacy') return <PrivacyView onNavigate={navigateTo} />;
+  if (currentRoute === 'terms') return <TermsView onNavigate={navigateTo} />;
+  if (currentRoute === 'disclaimer') return <DisclaimerView onNavigate={navigateTo} />;
+  if (currentRoute === 'cookies') return <CookiesView onNavigate={navigateTo} />;
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col justify-between selection:bg-neutral-900 selection:text-white">
@@ -536,72 +606,99 @@ export default function App() {
           </AnimatePresence>
 
           {/* E. CORE VIEWPORT CONTENT SCREEN WITH RESPONSIVELY SAFELY PADDING ADJUSTED */}
-          <main className="flex-1 overflow-y-auto mb-16 md:mb-0 bg-neutral-50 min-h-screen">
-            {currentRoute === 'dashboard' && (
-              <DashboardView 
-                onNavigate={navigateTo} 
-                selectedMonth={selectedMonth}
-                setSelectedMonth={setSelectedMonth}
-                showSeedBanner={showSeedBanner}
-                setShowSeedBanner={setShowSeedBanner}
-              />
-            )}
-            {currentRoute === 'expenses' && (
-              <ExpensesView 
-                onNavigate={navigateTo} 
-                selectedMonth={selectedMonth} 
-              />
-            )}
-            {currentRoute === 'bills' && (
-              <BillsView 
-                onNavigate={navigateTo} 
-                selectedMonth={selectedMonth} 
-              />
-            )}
-            {currentRoute === 'goals' && (
-              <GoalsView 
-                onNavigate={navigateTo} 
-                selectedMonth={selectedMonth}
-              />
-            )}
-            {currentRoute === 'presets' && (
-              <PresetsView 
-                onNavigate={navigateTo} 
-                selectedMonth={selectedMonth}
-              />
-            )}
-            {currentRoute === 'settings' && (
-              <SettingsView 
-                onNavigate={navigateTo} 
-                onLogout={handleLogout}
-                selectedMonth={selectedMonth}
-              />
-            )}
+          <main className="flex-1 overflow-y-auto mb-16 md:mb-0 bg-neutral-50 min-h-screen flex flex-col justify-between">
+            <div className="flex-grow">
+              {currentRoute === 'dashboard' && (
+                <DashboardView 
+                  onNavigate={navigateTo} 
+                  selectedMonth={selectedMonth}
+                  setSelectedMonth={setSelectedMonth}
+                  showSeedBanner={showSeedBanner}
+                  setShowSeedBanner={setShowSeedBanner}
+                />
+              )}
+              {currentRoute === 'expenses' && (
+                <ExpensesView 
+                  onNavigate={navigateTo} 
+                  selectedMonth={selectedMonth} 
+                />
+              )}
+              {currentRoute === 'bills' && (
+                <BillsView 
+                  onNavigate={navigateTo} 
+                  selectedMonth={selectedMonth} 
+                />
+              )}
+              {currentRoute === 'goals' && (
+                <GoalsView 
+                  onNavigate={navigateTo} 
+                  selectedMonth={selectedMonth}
+                />
+              )}
+              {currentRoute === 'presets' && (
+                <PresetsView 
+                  onNavigate={navigateTo} 
+                  selectedMonth={selectedMonth}
+                />
+              )}
+              {currentRoute === 'settings' && (
+                <SettingsView 
+                  onNavigate={navigateTo} 
+                  onLogout={handleLogout}
+                  selectedMonth={selectedMonth}
+                />
+              )}
+            </div>
+            <Footer onNavigate={navigateTo} />
           </main>
           
         </div>
       ) : (
         /* PUBLIC ROUTING (LANDING AND AUTHORIZATION FLOWS) */
-        <div className="flex-grow">
-          {currentRoute === 'landing' && (
-            <LandingView onNavigate={navigateTo} />
-          )}
-          {currentRoute === 'login' && (
-            <LoginView onNavigate={navigateTo} onLoginSuccess={handleLoginSuccess} />
-          )}
-          {currentRoute === 'signup' && (
-            <SignupView onNavigate={navigateTo} onSignupSuccess={handleSignupSuccess} />
-          )}
-          {currentRoute === 'onboarding' && (
-            <OnboardingView 
-              userName={user?.name || 'Adarsh'} 
-              userEmail={user?.email || 'adarsh.7025.v@gmail.com'}
-              onCompleteOnboarding={handleOnboardingComplete}
-            />
-          )}
+        <div className="flex-grow flex flex-col justify-between min-h-screen">
+          <div className="flex-grow">
+            {currentRoute === 'landing' && (
+              <LandingView onNavigate={navigateTo} />
+            )}
+            {currentRoute === 'login' && (
+              <LoginView onNavigate={navigateTo} onLoginSuccess={handleLoginSuccess} />
+            )}
+            {currentRoute === 'signup' && (
+              <SignupView onNavigate={navigateTo} onSignupSuccess={handleSignupSuccess} />
+            )}
+            {currentRoute === 'onboarding' && (
+              <OnboardingView 
+                userName={user?.name || 'Adarsh'} 
+                userEmail={user?.email || 'adarsh.7025.v@gmail.com'}
+                onCompleteOnboarding={handleOnboardingComplete}
+              />
+            )}
+          </div>
+          <Footer onNavigate={navigateTo} />
         </div>
       )}
 
     </div>
+  );
+}
+
+// 9. HIGHLY VISIBLE FOOTER COMPONENT
+function Footer({ onNavigate }: { onNavigate: (route: string) => void }) {
+  return (
+    <footer className="bg-white border-t border-neutral-200 py-6 text-center text-xs text-neutral-500 font-sans mt-auto">
+      <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="text-left">
+          <span className="font-bold text-neutral-800">© 2026 Budgety</span>
+          <span className="mx-2 text-neutral-300">•</span>
+          <span className="text-neutral-500">Crafted in India for smart family budget tracking</span>
+        </div>
+        <div className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 font-bold text-neutral-600">
+          <button onClick={() => onNavigate('privacy')} className="hover:text-black cursor-pointer transition-colors">Privacy Policy</button>
+          <button onClick={() => onNavigate('terms')} className="hover:text-black cursor-pointer transition-colors">Terms of Service</button>
+          <button onClick={() => onNavigate('disclaimer')} className="hover:text-black cursor-pointer transition-colors">Financial Disclaimer</button>
+          <button onClick={() => onNavigate('cookies')} className="hover:text-black cursor-pointer transition-colors">Storage Notice</button>
+        </div>
+      </div>
+    </footer>
   );
 }
